@@ -36,7 +36,7 @@ public class Main {
             if (linkPool.isEmpty()) {
                 break;
             }
-
+            //test
             //ArrayList从尾部删除更有效率  remove会返回刚刚删除的元素，所以这里直接remove
             String link = linkPool.remove(linkPool.size() - 1);
 
@@ -46,6 +46,9 @@ public class Main {
 
             //if (link.contains("news.sina.cn") || "https://sina.cn".equals(link)&&!link.contains("passprt.sina.cn")) {
             if (isInterestingInk(link)) {
+                if (link.contains("news.sina.cn\\/news_zt\\/")) {
+                    System.out.println("新闻：：：" + link);
+                }
                 Document doc = httpGetAndParseHtml(link);
 
                 ArrayList<Element> links = doc.select("a");
@@ -67,7 +70,7 @@ public class Main {
         ArrayList<Element> articleTags = doc.select("article");
         if (!articleTags.isEmpty()) {
             for (Element articleTag : articleTags) {
-                String title = articleTags.get(0).text();
+                String title = articleTags.get(0).child(0).text();
                 System.out.println(title);
             }
         }
@@ -81,6 +84,7 @@ public class Main {
             link = "https:" + link;
             System.out.println(link);
         }
+
         HttpGet httpGet = new HttpGet(link);
         httpGet.addHeader("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36");
 
@@ -95,7 +99,7 @@ public class Main {
     }
 
     private static boolean isInterestingInk(String link) {
-        return isNewsPage(link) || isIndexPage(link) && isNotLoginPage(link);
+        return (isNewsPage(link) || isIndexPage(link)) && isNotLoginPage(link) && isNotNewsZtPage(link);
 
     }
 
@@ -109,5 +113,9 @@ public class Main {
 
     private static boolean isNotLoginPage(String link) {
         return !link.contains("passport.sina.cn");
+    }
+
+    private static boolean isNotNewsZtPage(String link) {
+        return !link.contains("news.sina.cn\\/news_zt\\/");
     }
 }
