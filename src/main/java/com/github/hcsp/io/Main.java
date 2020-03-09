@@ -14,7 +14,7 @@ import org.jsoup.nodes.Element;
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.stream.Collectors;
 
 
 public class Main {
@@ -27,18 +27,9 @@ public class Main {
         String jdbcUrl = "jdbc:h2:file:/Users/jiangrui/java/my-git/xiedaimala-crawler/news";
         Connection connection = DriverManager.getConnection(jdbcUrl, USER_NAME, PASSWORD);
 
-        while (true) {
-
-            //待处理的链接池---》从数据库加载即将处理的链接的代码
-            List<String> linkPool = loadUrlsFromDataBase(connection, "select link from links_to_be_processed");
-
-            //已经处理的链接池---》从数据库加载已经处理链接的代码  这里注意返回的是List
-            //Set<String> processLinks =new HashSet<>(loadUrlsFromDataBase(connection,"select link from links_already_processed"));
-            //ArrayList从尾部删除更有效率  remove会返回刚刚删除的元素，所以这里直接remove
-            //每次处理完后，更新数据库
-            String link = linkPool.remove(linkPool.size() - 1);
-            //从待处理的池子中捞一个链接出来处理，处理完之后删除此链接
-            insertLinkIntoDataBase(connection, link, "delete from LINKS_TO_BE_PROCESSED where link = ? ");
+        String link;
+        //从数据库中加载一个链接，能加载到才开始循环
+        while ((link = getNextLinkThenDelete(connection)) != null) {
 
             //询问数据库，当前链接是不是已经被处理过了
             if (!isLinkProcessed(connection, link)) {
@@ -49,8 +40,8 @@ public class Main {
                     ArrayList<Element> links = doc.select("a");
                     parseUrlFromPageAndStoreIntoDataBase(connection, links);
                     //假如这是一个新闻的详情页面，则存入数据库，否则就什么都不做
-                    storeIntoDataBaseIfItIsNewsPage(doc);
-                    insertLinkIntoDataBase(connection, link, "insert into LINKS_ALREADY_PROCESSED values (?) ");
+                    storeIntoDataBaseIfItIsNewsPage(connection, doc, link);
+                    updateDataBase(connection, link, "insert into LINKS_ALREADY_PROCESSED values (?) ");
 
                 }
             }
@@ -61,10 +52,17 @@ public class Main {
     }
 
     private static void parseUrlFromPageAndStoreIntoDataBase(Connection connection, ArrayList<Element> links) throws SQLException {
+
         for (Element aTag : links) {
-//                    linkPool.add(aTag.attr("href")); //丢到链接池/**/
             String href = aTag.attr("href");
-            insertLinkIntoDataBase(connection, href, "insert into LINKS_TO_BE_PROCESSED values (?) ");
+            if (href.startsWith("//")) {
+                href = "https:" + href;
+                System.out.println(href);
+            }
+
+            if (!href.toLowerCase().startsWith("javascript")) {
+                updateDataBase(connection, href, "insert into LINKS_TO_BE_PROCESSED values (?) ");
+            }
 
         }
     }
@@ -87,39 +85,57 @@ public class Main {
 
     }
 
-    private static void insertLinkIntoDataBase(Connection connection, String link, String sql) throws SQLException {
+    private static void updateDataBase(Connection connection, String link, String sql) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, link);
             statement.executeUpdate();
         }
     }
 
-    private static List<String> loadUrlsFromDataBase(Connection connection, String sql) throws SQLException {
-        List<String> results = new ArrayList<>();
-        ;
+    private static String getNextLink(Connection connection, String sql) throws SQLException {
         ResultSet resultSet = null;
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             resultSet = statement.executeQuery();
 
             while (resultSet.next()) {
-                results.add(resultSet.getString(1));
+                return resultSet.getString(1);
             }
         } finally {
             if (resultSet != null) {
                 resultSet.close();
             }
         }
-        return results;
+        return null; //没找到则return null
 
     }
 
+    private static String getNextLinkThenDelete(Connection connection) throws SQLException {
+        //先从数据库拿出来一个链接（拿出来并从数据库中删除，防止拿到的链接是同一个），准备处理
+        String link = getNextLink(connection, "select link from links_to_be_processed limit 1");
+        if (link != null) {
+            //从待处理的池子中捞一个链接出来处理，处理完之后删除此链接
+            updateDataBase(connection, link, "delete from LINKS_TO_BE_PROCESSED where link = ? ");
+        }
 
-    private static void storeIntoDataBaseIfItIsNewsPage(Document doc) {
+        return link;
+
+
+    }
+
+    private static void storeIntoDataBaseIfItIsNewsPage(Connection connection, Document doc, String link) throws SQLException {
         ArrayList<Element> articleTags = doc.select("article");
         if (!articleTags.isEmpty()) {
             for (Element articleTag : articleTags) {
                 String title = articleTags.get(0).child(0).text();
-                System.out.println(title);
+                ArrayList<Element> paragraphs = articleTag.select("p");  //拿到文章的每个段落
+                String content = paragraphs.stream().map(Element::text).collect(Collectors.joining("\n"));  //每个段落以换行符分割，得到新闻的内容
+
+                try (PreparedStatement preparedStatement = connection.prepareStatement("insert into NEWS (title,url,content,CREATED_AT,MODIFIED_AT) values(?,?,?,now(),now())")) {
+                    preparedStatement.setString(1, title);
+                    preparedStatement.setString(2, link);
+                    preparedStatement.setString(3, content);
+                    preparedStatement.executeUpdate();
+                }
             }
         }
     }
@@ -128,10 +144,7 @@ public class Main {
         //这是我们感兴趣的，我们只处理新浪站内的链接
         CloseableHttpClient httpclient = HttpClients.createDefault();
         System.out.println(link);
-        if (link.startsWith("//")) {
-            link = "https:" + link;
-            System.out.println(link);
-        }
+
 
         HttpGet httpGet = new HttpGet(link);
         httpGet.addHeader("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36");
