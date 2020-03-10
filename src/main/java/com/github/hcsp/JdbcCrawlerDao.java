@@ -1,4 +1,4 @@
-package com.github.hcsp.io;
+package com.github.hcsp;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -21,7 +21,7 @@ public class JdbcCrawlerDao implements CrawlerDao {
 
     }
 
-    public String getNextLink(String sql) throws SQLException {
+    private  String getNextLink(String sql) throws SQLException {
         ResultSet resultSet = null;
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             resultSet = statement.executeQuery();
@@ -87,13 +87,16 @@ public class JdbcCrawlerDao implements CrawlerDao {
 
     }
 
+    @Override
+    public void insertProcessedLink(String link) {
 
-    private static void insertIntoLinksToBeProcessed(Connection connection, String link) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("insert into LINKS_ALREADY_PROCESSED values (?)")) {
-            statement.setString(1, link);
-            statement.executeUpdate();
-        }
     }
+
+    @Override
+    public void insertLinkToBeProcessed(String href) {
+
+    }
+
 
 
     /*public String selectLinksFromAlreadyProcessed(Connection connection, String link) throws SQLException {

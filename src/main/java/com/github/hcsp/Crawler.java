@@ -1,4 +1,4 @@
-package com.github.hcsp.io;
+package com.github.hcsp;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.http.HttpEntity;
@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 
 public class Crawler {
-    CrawlerDao dao = new JdbcCrawlerDao();
+    CrawlerDao dao = new MyBatisCrawlerDao();
 
     public void run() throws SQLException, IOException {
 
@@ -36,7 +36,8 @@ public class Crawler {
                     parseUrlFromPageAndStoreIntoDataBase(links);
                     //假如这是一个新闻的详情页面，则存入数据库，否则就什么都不做
                     storeIntoDataBaseIfItIsNewsPage(doc, link);
-                    dao.updateDataBase(link, "insert into LINKS_ALREADY_PROCESSED values (?) ");
+                    dao.insertProcessedLink(link);
+                   // dao.updateDataBase(link, "insert into LINKS_ALREADY_PROCESSED values (?) ");
 
                 }
             }
@@ -63,7 +64,7 @@ public class Crawler {
             }
 
             if (!href.toLowerCase().startsWith("javascript")) {
-                dao.updateDataBase(href, "insert into LINKS_TO_BE_PROCESSED values (?) ");
+                dao.insertLinkToBeProcessed(href);
             }
 
         }

@@ -1,4 +1,4 @@
-package com.github.hcsp.io;
+package com.github.hcsp;
 
 
 public class News {
@@ -6,6 +6,12 @@ public class News {
     private String title;
     private String url;
     private String content;
+
+    public News(String title, String url, String content) {
+        this.title = title;
+        this.url = url;
+        this.content = content;
+    }
 
     public int getId() {
         return id;
