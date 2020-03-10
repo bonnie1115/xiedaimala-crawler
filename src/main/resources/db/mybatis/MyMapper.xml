@@ -10,16 +10,16 @@
     </select>
     <delete id="deleteLinksFromLinksToBeProcessed" parameterType="String">
         delete
-        from LINKS_TO_BE_PROCESSED
+        from links_to_be_processed
         where link = #{link}
     </delete>
     <insert id="insertNews" parameterType="com.github.hcsp.News">
-        insert into NEWS (title, url, content, CREATED_AT, MODIFIED_AT)
+        insert into news (title, url, content, CREATED_AT, MODIFIED_AT)
         values (#{title}, #{url}, #{content}, now(), now());
     </insert>
     <select id="countLink" parameterType="String" resultType="int">
         select count(*)
-        from LINKS_ALREADY_PROCESSED
+        from links_already_processed
         where link = #{link}
     </select>
     <insert id="insertLink" parameterType="HashMap">

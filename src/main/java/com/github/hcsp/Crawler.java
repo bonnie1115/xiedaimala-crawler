@@ -76,6 +76,7 @@ public class Crawler {
         if (!articleTags.isEmpty()) {
             for (Element articleTag : articleTags) {
                 String title = articleTags.get(0).child(0).text();
+                System.out.println(title);
                 ArrayList<Element> paragraphs = articleTag.select("p");  //拿到文章的每个段落
                 String content = paragraphs.stream().map(Element::text).collect(Collectors.joining("\n"));  //每个段落以换行符分割，得到新闻的内容
                 dao.insertIntoNews(link, title, content);
@@ -94,7 +95,6 @@ public class Crawler {
         httpGet.addHeader("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36");
 
         try (CloseableHttpResponse response1 = httpclient.execute(httpGet)) {
-            System.out.println(response1.getStatusLine());
             HttpEntity entity1 = response1.getEntity();
             String html = EntityUtils.toString(entity1);  //String 格式的html
 
