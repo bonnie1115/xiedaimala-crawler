@@ -17,42 +17,45 @@ import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 
-public class Crawler {
-    CrawlerDao dao = new MyBatisCrawlerDao();
+public class Crawler extends Thread{
+    CrawlerDao dao;
 
-    public void run() throws SQLException, IOException {
-
-        String link;
-        //从数据库中加载一个链接，能加载到才开始循环
-        while ((link = dao.getNextLinkThenDelete()) != null) {
-
-            //询问数据库，当前链接是不是已经被处理过了
-            if (!dao.isLinkProcessed(link)) {
-                //只关心news.cn的排除掉passport的
-                //if (link.contains("news.sina.cn") || "https://sina.cn".equals(link)&&!link.contains("passprt.sina.cn")) {
-                if (isInterestingInk(link)) {
-                    Document doc = httpGetAndParseHtml(link);
-                    ArrayList<Element> links = doc.select("a");
-                    parseUrlFromPageAndStoreIntoDataBase(links);
-                    //假如这是一个新闻的详情页面，则存入数据库，否则就什么都不做
-                    storeIntoDataBaseIfItIsNewsPage(doc, link);
-                    dao.insertProcessedLink(link);
-                   // dao.updateDataBase(link, "insert into LINKS_ALREADY_PROCESSED values (?) ");
-
-                }
-            }
-
-
-        }
+    public Crawler(CrawlerDao dao) {
+        this.dao = dao;
     }
 
+    @Override
+    public void run() {
 
-    @SuppressFBWarnings("DMI_CONSTANT_DB_PASSWORD")
-    public static void main(String[] args) throws IOException, SQLException {
+       try {
+           String link;
+           //从数据库中加载一个链接，能加载到才开始循环
+           while ((link = dao.getNextLinkThenDelete()) != null) {
 
-        new Crawler().run();
+               //询问数据库，当前链接是不是已经被处理过了
+               if (!dao.isLinkProcessed(link)) {
+                   //只关心news.cn的排除掉passport的
+                   //if (link.contains("news.sina.cn") || "https://sina.cn".equals(link)&&!link.contains("passprt.sina.cn")) {
+                   if (isInterestingInk(link)) {
+                       Document doc = httpGetAndParseHtml(link);
+                       ArrayList<Element> links = doc.select("a");
+                       parseUrlFromPageAndStoreIntoDataBase(links);
+                       //假如这是一个新闻的详情页面，则存入数据库，否则就什么都不做
+                       storeIntoDataBaseIfItIsNewsPage(doc, link);
+                       dao.insertProcessedLink(link);
+                       // dao.updateDataBase(link, "insert into LINKS_ALREADY_PROCESSED values (?) ");
+
+                   }
+               }
+
+
+           }
+       }catch (Exception e){
+           throw new RuntimeException(e) ;
+       }
 
     }
+
 
     public void parseUrlFromPageAndStoreIntoDataBase(ArrayList<Element> links) throws SQLException {
 
