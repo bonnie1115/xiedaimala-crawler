@@ -17,4 +17,4 @@ create table news
     created_at  timestamp default now(),
     modified_at timestamp default now()
 
-);
+) DEFAULT CHARSET=utf8mb4;
