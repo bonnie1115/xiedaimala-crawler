@@ -8,6 +8,11 @@
         from news
 
     </select>
+    <select id="selectNewsForES"  resultType="com.github.hcsp.News">
+        select id,url,title,content,created_at,modified_at
+        from news limit 2000
+
+    </select>
     <insert id="insertNews" parameterType="com.github.hcsp.News">
         insert into news (url,title,content,created_at,modified_at)
         values (#{url},#{title},#{content},#{createdAt},#{modifiedAt})
